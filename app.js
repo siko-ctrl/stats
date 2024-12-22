@@ -3,6 +3,14 @@ const NODES = [
     'https://172.245.110.15.nip.io/json_rpc'  // VPS proxy server with HTTPS
 ];
 
+// Global state for historical data
+const historicalData = {
+    blockHeight: [],
+    hashrate: [],
+    difficulty: [],
+    totalSupply: []
+};
+
 // Utility functions to log errors to the UI
 function displayErrorOnPage(message) {
     const errorDiv = document.getElementById('error-display') || createErrorDisplay();
@@ -60,6 +68,73 @@ function logError(error, context = '') {
         console.error('Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     }
     console.error('=== END ERROR DETAILS ===');
+}
+
+// Utility function to manage historical data
+function updateHistoricalData(dataType, value) {
+    const maxDataPoints = 50; // Keep last 50 data points
+    historicalData[dataType].push({
+        timestamp: new Date().toISOString(),
+        value: value
+    });
+
+    // Trim historical data if it exceeds max points
+    if (historicalData[dataType].length > maxDataPoints) {
+        historicalData[dataType].shift();
+    }
+}
+
+// Create or update charts
+function updateCharts() {
+    // Block Height Chart
+    const blockHeightChart = document.getElementById('blockHeightChart');
+    if (blockHeightChart && window.Chart) {
+        new window.Chart(blockHeightChart, {
+            type: 'line',
+            data: {
+                labels: historicalData.blockHeight.map(d => new Date(d.timestamp).toLocaleTimeString()),
+                datasets: [{
+                    label: 'Block Height',
+                    data: historicalData.blockHeight.map(d => d.value),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    }
+
+    // Hashrate Chart
+    const hashrateChart = document.getElementById('hashrateChart');
+    if (hashrateChart && window.Chart) {
+        new window.Chart(hashrateChart, {
+            type: 'line',
+            data: {
+                labels: historicalData.hashrate.map(d => new Date(d.timestamp).toLocaleTimeString()),
+                datasets: [{
+                    label: 'Network Hashrate',
+                    data: historicalData.hashrate.map(d => d.value),
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
 }
 
 // Make RPC call to a node with retries
@@ -174,18 +249,38 @@ async function updateStats() {
                     const difficultyEl = document.getElementById('difficulty');
                     const hashrateEl = document.getElementById('hashrate');
                     const totalSupplyEl = document.getElementById('totalSupply');
+                    const networkTypeEl = document.getElementById('networkType');
+                    const lastBlockEl = document.getElementById('lastBlock');
                     
-                    if (blockHeightEl) blockHeightEl.textContent = formatNumber(info.height);
-                    if (difficultyEl) difficultyEl.textContent = formatNumber(info.difficulty);
-                    if (hashrateEl) hashrateEl.textContent = formatHashrate(info.difficulty / 120);
+                    // Calculate and update values
+                    const blockHeight = info.height;
+                    const difficulty = info.difficulty;
+                    const hashrate = formatHashrate(difficulty / 120);
+                    const supply = (blockHeight * 50) + 1000000;
                     
-                    // Calculate total supply
-                    const supply = (info.height * 50) + 1000000;
-                    if (totalSupplyEl) totalSupplyEl.textContent = formatNumber(supply) + ' SAL';
+                    // Update DOM elements
+                    if (blockHeightEl) {
+                        blockHeightEl.textContent = formatNumber(blockHeight);
+                        updateHistoricalData('blockHeight', blockHeight);
+                    }
+                    if (difficultyEl) difficultyEl.textContent = formatNumber(difficulty);
+                    if (hashrateEl) {
+                        hashrateEl.textContent = hashrate;
+                        updateHistoricalData('hashrate', parseFloat(hashrate));
+                    }
+                    if (totalSupplyEl) {
+                        totalSupplyEl.textContent = formatNumber(supply) + ' SAL';
+                        updateHistoricalData('totalSupply', supply);
+                    }
+                    if (networkTypeEl) networkTypeEl.textContent = 'Mainnet';
+                    if (lastBlockEl) lastBlockEl.textContent = new Date().toLocaleString();
                     
                     // Update status
                     statusDot.style.backgroundColor = '#00ff00';
                     statusText.textContent = 'Connected';
+                    
+                    // Update charts
+                    updateCharts();
                     
                     console.log('Stats updated successfully');
                     success = true;
@@ -211,7 +306,7 @@ async function updateStats() {
         statusText.textContent = 'Connection Error';
         
         // Clear stats when offline
-        const elements = ['blockHeight', 'difficulty', 'hashrate', 'totalSupply'];
+        const elements = ['blockHeight', 'difficulty', 'hashrate', 'totalSupply', 'networkType', 'lastBlock'];
         elements.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = '-';

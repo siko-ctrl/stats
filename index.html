@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salvium Network Statistics</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="icon" type="image/x-icon" href="https://siko-ctrl.github.io/salvium/assets/img/favicon.ico">
 </head>
 <body>
@@ -35,9 +36,30 @@
                 <p id="totalSupply">Loading...</p>
             </div>
             <div class="stat-card">
+                <i class="fas fa-globe"></i>
+                <h3>Network Type</h3>
+                <p id="networkType">Loading...</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <h3>Last Block</h3>
+                <p id="lastBlock">Loading...</p>
+            </div>
+            <div class="stat-card">
                 <i class="fas fa-chart-line"></i>
-                <h3>Difficulty</h3>
+                <h3>Network Difficulty</h3>
                 <p id="difficulty">Loading...</p>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>Block Height Trend</h3>
+                <canvas id="blockHeightChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Network Hashrate Trend</h3>
+                <canvas id="hashrateChart"></canvas>
             </div>
         </div>
 
@@ -47,6 +69,8 @@
                 <!-- Nodes will be populated here -->
             </div>
         </div>
+
+        <div id="error-display" class="error-display"></div>
     </div>
 
     <footer>
