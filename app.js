@@ -3,7 +3,27 @@ const NODES = [
     'https://172.245.110.15.nip.io/json_rpc'  // VPS proxy server with HTTPS
 ];
 
-// Utility functions
+// Utility functions to log errors to the UI
+function displayErrorOnPage(message) {
+    const errorDiv = document.getElementById('error-display') || createErrorDisplay();
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function createErrorDisplay() {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'error-display';
+    errorDiv.style.position = 'fixed';
+    errorDiv.style.top = '10px';
+    errorDiv.style.left = '10px';
+    errorDiv.style.backgroundColor = 'red';
+    errorDiv.style.color = 'white';
+    errorDiv.style.padding = '10px';
+    errorDiv.style.zIndex = '1000';
+    document.body.appendChild(errorDiv);
+    return errorDiv;
+}
+
 function formatHashrate(hashrate) {
     const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s'];
     let unitIndex = 0;
@@ -82,21 +102,29 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
             try {
                 data = JSON.parse(responseText);
             } catch (parseError) {
-                console.error('Failed to parse response:', parseError);
-                console.error('Unparseable response text:', responseText);
-                throw new Error(`Failed to parse JSON response: ${parseError.message}`);
+                const errorMessage = `JSON Parse Error: ${parseError.message}\nResponse Text: ${responseText}`;
+                console.error(errorMessage);
+                displayErrorOnPage(errorMessage);
+                logError(parseError, 'JSON Parse Error');
+                throw parseError;
             }
             
             console.log('Parsed response data:', data);
             
             if (data.error) {
-                throw new Error(`RPC error: ${JSON.stringify(data.error)}`);
+                const errorMessage = `RPC Error: ${JSON.stringify(data.error)}`;
+                console.error(errorMessage);
+                displayErrorOnPage(errorMessage);
+                logError(new Error(errorMessage), 'RPC Error');
+                throw new Error(errorMessage);
             }
             
             return data;
         } catch (error) {
-            console.error(`Attempt ${attempt} failed for ${method}:`, error);
-            logError(error, `RPC Call Attempt ${attempt}`);
+            const errorMessage = `Network Error (Attempt ${attempt}): ${error.message}`;
+            console.error(errorMessage);
+            displayErrorOnPage(errorMessage);
+            logError(error, `Network Error (Attempt ${attempt})`);
             
             if (attempt === retries) {
                 throw new Error(`Failed after ${retries} attempts: ${error.message}`);
@@ -122,6 +150,8 @@ async function updateStats() {
     // Ensure elements exist before using them
     if (!statusDot || !statusText) {
         console.error('Status elements not found in the DOM');
+        displayErrorOnPage('Status elements not found');
+        logError(new Error('Status elements not found'), 'Status Elements Not Found');
         return;
     }
     
@@ -163,7 +193,7 @@ async function updateStats() {
                 }
             } catch (error) {
                 console.error(`Failed to update stats from node ${node}:`, error);
-                logError(error, `Stats Update for Node ${node}`);
+                logError(error, `Failed to Update Stats from Node ${node}`);
                 // Continue to next node
             }
         }
@@ -175,7 +205,7 @@ async function updateStats() {
         
     } catch (error) {
         console.error('Failed to update stats:', error);
-        logError(error, 'Final Stats Update');
+        logError(error, 'Failed to Update Stats');
         
         statusDot.style.backgroundColor = '#ff0000';
         statusText.textContent = 'Connection Error';
@@ -186,6 +216,9 @@ async function updateStats() {
             const el = document.getElementById(id);
             if (el) el.textContent = '-';
         });
+        
+        // Display error to user
+        displayErrorOnPage(error.message);
     }
     
     console.log('=== Completed updateStats ===');
