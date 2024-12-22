@@ -55,6 +55,101 @@ const chartOptions = {
     }
 };
 
+// Initialize charts
+let blockTimeChart, hashrateChart;
+let blockTimeData = [], hashrateData = [];
+
+// Format hashrate to human readable format
+const formatHashrate = (hashrate) => {
+    const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s'];
+    let unitIndex = 0;
+    
+    while (hashrate >= 1000 && unitIndex < units.length - 1) {
+        hashrate /= 1000;
+        unitIndex++;
+    }
+    
+    return `${hashrate.toFixed(2)} ${units[unitIndex]}`;
+};
+
+// Format SAL amount
+const formatSAL = (amount) => {
+    return (amount / 1e8).toFixed(2) + ' SAL';
+};
+
+// Format time ago
+const formatTimeAgo = (timestamp) => {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    
+    if (seconds < 60) return `${seconds} seconds ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return `${Math.floor(seconds / 86400)} days ago`;
+};
+
+// Initialize charts
+const initializeCharts = () => {
+    const ctx1 = document.getElementById('blockTimeChart').getContext('2d');
+    const ctx2 = document.getElementById('hashrateChart').getContext('2d');
+
+    // Initialize with empty data
+    const emptyData = Array(CHART_POINTS).fill(0);
+    const emptyLabels = Array(CHART_POINTS).fill('');
+
+    blockTimeChart = new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: emptyLabels,
+            datasets: [{
+                data: emptyData,
+                borderColor: COLORS.primary,
+                backgroundColor: 'rgba(10, 235, 133, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: chartOptions
+    });
+
+    hashrateChart = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: emptyLabels,
+            datasets: [{
+                data: emptyData,
+                borderColor: COLORS.primary,
+                backgroundColor: 'rgba(10, 235, 133, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: chartOptions
+    });
+};
+
+// Update chart data
+const updateCharts = (blockTime, hashrate) => {
+    const timestamp = new Date().toLocaleTimeString();
+    
+    // Update block time chart
+    blockTimeData.push({ x: timestamp, y: blockTime });
+    if (blockTimeData.length > CHART_POINTS) blockTimeData.shift();
+    
+    blockTimeChart.data.labels = blockTimeData.map(point => point.x);
+    blockTimeChart.data.datasets[0].data = blockTimeData.map(point => point.y);
+    blockTimeChart.update('none'); // Use 'none' to disable animation for smoother updates
+    
+    // Update hashrate chart
+    hashrateData.push({ x: timestamp, y: hashrate });
+    if (hashrateData.length > CHART_POINTS) hashrateData.shift();
+    
+    hashrateChart.data.labels = hashrateData.map(point => point.x);
+    hashrateChart.data.datasets[0].data = hashrateData.map(point => point.y);
+    hashrateChart.update('none'); // Use 'none' to disable animation for smoother updates
+};
+
 // Global state for historical data and node tracking
 const historicalData = {
     blockHeight: [],
@@ -64,10 +159,6 @@ const historicalData = {
 };
 
 const nodeStatus = [];
-
-// Initialize charts
-let blockTimeChart, hashrateChart;
-let blockTimeData = [], hashrateData = [];
 
 // Utility functions to log errors to the UI
 function displayErrorOnPage(message) {
@@ -112,27 +203,9 @@ function calculateSupply(height) {
     return supply;
 }
 
-// Format hashrate
-function formatHashrate(hashrate) {
-    const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s'];
-    let unitIndex = 0;
-    
-    while (hashrate >= 1000 && unitIndex < units.length - 1) {
-        hashrate /= 1000;
-        unitIndex++;
-    }
-    
-    return `${hashrate.toFixed(2)} ${units[unitIndex]}`;
-}
-
 // Format number with commas
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-// Format SAL amount
-function formatSAL(amount) {
-    return (amount / COIN).toFixed(8);
 }
 
 // Detailed error logging function
@@ -193,93 +266,6 @@ function updateHistoricalData(dataType, value) {
     // Trigger chart update
     updateCharts();
 }
-
-// Initialize charts
-function initializeCharts() {
-    const ctx1 = document.getElementById('blockTimeChart').getContext('2d');
-    const ctx2 = document.getElementById('hashrateChart').getContext('2d');
-
-    blockTimeChart = new Chart(ctx1, {
-        type: 'line',
-        data: {
-            labels: Array(CHART_POINTS).fill(''),
-            datasets: [{
-                data: Array(CHART_POINTS).fill(0),
-                borderColor: COLORS.primary,
-                backgroundColor: 'rgba(10, 235, 133, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: chartOptions
-    });
-
-    hashrateChart = new Chart(ctx2, {
-        type: 'line',
-        data: {
-            labels: Array(CHART_POINTS).fill(''),
-            datasets: [{
-                data: Array(CHART_POINTS).fill(0),
-                borderColor: COLORS.primary,
-                backgroundColor: 'rgba(10, 235, 133, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: chartOptions
-    });
-};
-
-// Format hashrate to human readable format
-function formatHashrate(hashrate) {
-    const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s'];
-    let unitIndex = 0;
-    
-    while (hashrate >= 1000 && unitIndex < units.length - 1) {
-        hashrate /= 1000;
-        unitIndex++;
-    }
-    
-    return `${hashrate.toFixed(2)} ${units[unitIndex]}`;
-};
-
-// Format SAL amount
-function formatSAL(amount) {
-    return (amount / 1e8).toFixed(2) + ' SAL';
-};
-
-// Format time ago
-function formatTimeAgo(timestamp) {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    
-    if (seconds < 60) return `${seconds} seconds ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
-    return `${Math.floor(seconds / 86400)} days ago`;
-};
-
-// Update chart data
-function updateCharts(blockTime, hashrate) {
-    const timestamp = new Date().toLocaleTimeString();
-    
-    // Update block time chart
-    blockTimeData.push({ x: timestamp, y: blockTime });
-    if (blockTimeData.length > CHART_POINTS) blockTimeData.shift();
-    
-    blockTimeChart.data.labels = blockTimeData.map(point => point.x);
-    blockTimeChart.data.datasets[0].data = blockTimeData.map(point => point.y);
-    blockTimeChart.update();
-    
-    // Update hashrate chart
-    hashrateData.push({ x: timestamp, y: hashrate });
-    if (hashrateData.length > CHART_POINTS) hashrateData.shift();
-    
-    hashrateChart.data.labels = hashrateData.map(point => point.x);
-    hashrateChart.data.datasets[0].data = hashrateData.map(point => point.y);
-    hashrateChart.update();
-};
 
 // Update network stats
 async function updateStats() {
