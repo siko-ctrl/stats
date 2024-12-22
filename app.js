@@ -13,13 +13,14 @@ const GENESIS_BLOCK_REWARD = 6000000000000;
 const MINIMUM_FEE = 100000;
 const COIN = 100000000;
 
-// Constants
+// UI Constants
 const REFRESH_INTERVAL = 120000; // 2 minutes
 const CHART_POINTS = 20;
 const COLORS = {
     primary: '#0AEB85',
     secondary: '#181818',
-    white: '#FFFFFF'
+    white: '#FFFFFF',
+    background: '#181818'
 };
 
 // Chart configurations
@@ -45,7 +46,8 @@ const chartOptions = {
             },
             ticks: {
                 color: COLORS.white
-            }
+            },
+            beginAtZero: true
         }
     },
     plugins: {
@@ -55,12 +57,14 @@ const chartOptions = {
     }
 };
 
-// Initialize charts
-let blockTimeChart, hashrateChart;
-let blockTimeData = [], hashrateData = [];
+// Chart instances
+let blockTimeChart = null;
+let hashrateChart = null;
+let blockTimeData = [];
+let hashrateData = [];
 
 // Format hashrate to human readable format
-const formatHashrate = (hashrate) => {
+function formatHashrate(hashrate) {
     const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s'];
     let unitIndex = 0;
     
@@ -70,27 +74,36 @@ const formatHashrate = (hashrate) => {
     }
     
     return `${hashrate.toFixed(2)} ${units[unitIndex]}`;
-};
+}
 
 // Format SAL amount
-const formatSAL = (amount) => {
-    return (amount / 1e8).toFixed(2) + ' SAL';
-};
+function formatSAL(amount) {
+    return (amount / COIN).toFixed(2) + ' SAL';
+}
 
 // Format time ago
-const formatTimeAgo = (timestamp) => {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+function formatTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp * 1000) / 1000);
     
     if (seconds < 60) return `${seconds} seconds ago`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
     return `${Math.floor(seconds / 86400)} days ago`;
-};
+}
+
+// Format number with commas
+function formatNumber(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
 // Initialize charts
-const initializeCharts = () => {
+function initializeCharts() {
     const ctx1 = document.getElementById('blockTimeChart').getContext('2d');
     const ctx2 = document.getElementById('hashrateChart').getContext('2d');
+
+    // Set chart background
+    ctx1.canvas.style.backgroundColor = COLORS.background;
+    ctx2.canvas.style.backgroundColor = COLORS.background;
 
     // Initialize with empty data
     const emptyData = Array(CHART_POINTS).fill(0);
@@ -109,7 +122,20 @@ const initializeCharts = () => {
                 tension: 0.4
             }]
         },
-        options: chartOptions
+        options: {
+            ...chartOptions,
+            scales: {
+                ...chartOptions.scales,
+                y: {
+                    ...chartOptions.scales.y,
+                    title: {
+                        display: true,
+                        text: 'Block Time (seconds)',
+                        color: COLORS.white
+                    }
+                }
+            }
+        }
     });
 
     hashrateChart = new Chart(ctx2, {
@@ -125,12 +151,27 @@ const initializeCharts = () => {
                 tension: 0.4
             }]
         },
-        options: chartOptions
+        options: {
+            ...chartOptions,
+            scales: {
+                ...chartOptions.scales,
+                y: {
+                    ...chartOptions.scales.y,
+                    title: {
+                        display: true,
+                        text: 'Hashrate',
+                        color: COLORS.white
+                    }
+                }
+            }
+        }
     });
-};
+}
 
 // Update chart data
-const updateCharts = (blockTime, hashrate) => {
+function updateCharts(blockTime, hashrate) {
+    if (!blockTimeChart || !hashrateChart) return;
+
     const timestamp = new Date().toLocaleTimeString();
     
     // Update block time chart
@@ -148,421 +189,96 @@ const updateCharts = (blockTime, hashrate) => {
     hashrateChart.data.labels = hashrateData.map(point => point.x);
     hashrateChart.data.datasets[0].data = hashrateData.map(point => point.y);
     hashrateChart.update('none'); // Use 'none' to disable animation for smoother updates
-};
-
-// Global state for historical data and node tracking
-const historicalData = {
-    blockHeight: [],
-    hashrate: [],
-    difficulty: [],
-    totalSupply: []
-};
-
-const nodeStatus = [];
-
-// Utility functions to log errors to the UI
-function displayErrorOnPage(message) {
-    const errorDiv = document.getElementById('error-display') || createErrorDisplay();
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
 }
 
-function createErrorDisplay() {
-    const errorDiv = document.createElement('div');
-    errorDiv.id = 'error-display';
-    errorDiv.style.position = 'fixed';
-    errorDiv.style.top = '10px';
-    errorDiv.style.left = '10px';
-    errorDiv.style.backgroundColor = 'red';
-    errorDiv.style.color = 'white';
-    errorDiv.style.padding = '10px';
-    errorDiv.style.zIndex = '1000';
-    document.body.appendChild(errorDiv);
-    return errorDiv;
-}
-
-// Calculate block reward
-function calculateBlockReward(alreadyGeneratedCoins) {
-    if (alreadyGeneratedCoins === 0) {
-        return GENESIS_BLOCK_REWARD;
-    }
-
-    const base_reward = (MONEY_SUPPLY - alreadyGeneratedCoins) >> EMISSION_SPEED_FACTOR;
-    return Math.max(base_reward, MINIMUM_FEE);
-}
-
-// Calculate supply
-function calculateSupply(height) {
-    let supply = 0;
-    let baseReward = GENESIS_BLOCK_REWARD;
-    
-    for (let i = 0; i < height; i++) {
-        supply += calculateBlockReward(supply);
-    }
-    
-    return supply;
-}
-
-// Format number with commas
-function formatNumber(num) {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-// Detailed error logging function
-function logError(error, context = '') {
-    console.error('=== ERROR DETAILS ===');
-    console.error('Context:', context);
-    console.error('Error Name:', error.name);
-    console.error('Error Message:', error.message);
-    console.error('Error Stack:', error.stack);
-    
-    // Additional error properties
-    if (error instanceof TypeError) {
-        console.error('Error Type Details:', {
-            lineNumber: error.lineNumber,
-            columnNumber: error.columnNumber,
-            fileName: error.fileName
-        });
-    }
-    
-    // If it's a network error, log more details
-    if (error instanceof Error) {
-        console.error('Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-    }
-    console.error('=== END ERROR DETAILS ===');
-}
-
-// Utility function to manage historical data
-function updateHistoricalData(dataType, value) {
-    console.log(`Updating historical data for ${dataType}:`, value);
-    
-    // Validate input
-    if (!historicalData[dataType]) {
-        console.warn(`Invalid data type: ${dataType}`);
-        return;
-    }
-    
-    // Ensure value is a number
-    const numericValue = Number(value);
-    if (isNaN(numericValue)) {
-        console.warn(`Invalid numeric value for ${dataType}:`, value);
-        return;
-    }
-    
-    // Add new data point
-    const maxDataPoints = 20; // Limit to last 20 data points
-    historicalData[dataType].push({
-        timestamp: Date.now(),
-        value: numericValue
+// Make RPC call to a node
+async function makeRPCCall(node, method, params = {}) {
+    const response = await fetch(node, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: '1',
+            method: method,
+            params: params
+        })
     });
-    
-    // Trim historical data if it exceeds max points
-    if (historicalData[dataType].length > maxDataPoints) {
-        historicalData[dataType].shift();
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
-    console.log(`Updated ${dataType} historical data:`, historicalData[dataType]);
-    
-    // Trigger chart update
-    updateCharts();
+
+    const data = await response.json();
+    if (data.error) {
+        throw new Error(data.error.message);
+    }
+
+    return data.result;
 }
 
 // Update network stats
 async function updateStats() {
-    try {
-        // Check status of all nodes
-        nodeStatus.length = 0;
-        const nodeStatusPromises = NODES.map(checkNodeStatus);
-        const nodeResults = await Promise.all(nodeStatusPromises);
-        nodeStatus.push(...nodeResults.filter(result => result));
-        
-        // Update nodes section
-        updateNodesSection();
-        
-        let success = false;
-        for (const node of NODES) {
-            try {
-                console.log(`Trying node: ${node}`);
-                
-                const infoResponse = await makeRPCCall(node, "get_info", {});
-                console.log('get_info response:', infoResponse);
-                
-                if (infoResponse && infoResponse.result) {
-                    const info = infoResponse.result;
-                    
-                    // Calculate values
-                    const blockHeight = info.height;
-                    const difficulty = info.difficulty;
-                    const hashrate = difficulty / DIFFICULTY_TARGET;
-                    const supply = calculateSupply(blockHeight);
-                    const reward = calculateBlockReward(supply);
-                    
-                    // Update UI elements
-                    document.getElementById('blockHeight').textContent = formatNumber(blockHeight);
-                    document.getElementById('difficulty').textContent = formatNumber(difficulty);
-                    document.getElementById('hashrate').textContent = formatHashrate(hashrate);
-                    document.getElementById('totalSupply').textContent = `${formatNumber(formatSAL(supply))} SAL`;
-                    document.getElementById('networkType').textContent = 'Mainnet';
-                    document.getElementById('lastBlock').textContent = new Date().toLocaleString();
-                    
-                    // Update historical data
-                    updateHistoricalData('blockHeight', blockHeight);
-                    updateHistoricalData('hashrate', hashrate);
-                    updateHistoricalData('totalSupply', supply);
-                    
-                    // Update yield section
-                    const yieldSection = document.getElementById('yieldSection');
-                    if (yieldSection) {
-                        const yearlyBlocks = (365 * 24 * 60 * 60) / DIFFICULTY_TARGET;
-                        const yearlyEmission = yearlyBlocks * reward;
-                        const inflationRate = (yearlyEmission / supply) * 100;
-                        
-                        yieldSection.innerHTML = `
-                            <div class="yield-stats">
-                                <div class="stat-card">
-                                    <i class="fas fa-coins"></i>
-                                    <h3>Block Reward</h3>
-                                    <p>${formatSAL(reward)} SAL</p>
-                                </div>
-                                <div class="stat-card">
-                                    <i class="fas fa-chart-line"></i>
-                                    <h3>Yearly Emission</h3>
-                                    <p>${formatSAL(yearlyEmission)} SAL</p>
-                                </div>
-                                <div class="stat-card">
-                                    <i class="fas fa-percentage"></i>
-                                    <h3>Inflation Rate</h3>
-                                    <p>${inflationRate.toFixed(2)}%</p>
-                                </div>
-                                <div class="stat-card">
-                                    <i class="fas fa-piggy-bank"></i>
-                                    <h3>Current Supply</h3>
-                                    <p>${formatSAL(supply)} SAL</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    // Update blockchain info
-                    const blockchainInfoSection = document.getElementById('blockchainInfo');
-                    if (blockchainInfoSection) {
-                        blockchainInfoSection.innerHTML = `
-                            <div class="info-grid">
-                                <div class="info-card">
-                                    <i class="fas fa-link"></i>
-                                    <h3>Block Height</h3>
-                                    <p>${formatNumber(blockHeight)}</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-chart-line"></i>
-                                    <h3>Network Difficulty</h3>
-                                    <p>${formatNumber(difficulty)}</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-clock"></i>
-                                    <h3>Block Time</h3>
-                                    <p>${DIFFICULTY_TARGET} seconds</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-network-wired"></i>
-                                    <h3>Network Hashrate</h3>
-                                    <p>${formatHashrate(hashrate)}</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-coins"></i>
-                                    <h3>Circulating Supply</h3>
-                                    <p>${formatSAL(supply)} SAL</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-globe"></i>
-                                    <h3>Network Version</h3>
-                                    <p>${info.version || 'Unknown'}</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    // Update charts
-                    updateCharts(info.block_time || 120, hashrate);
-                    
-                    console.log('Stats updated successfully');
-                    success = true;
-                    break;
-                }
-            } catch (error) {
-                console.error(`Failed to update stats from node ${node}:`, error);
-            }
-        }
-        
-        if (!success) {
-            throw new Error('All nodes failed to respond');
-        }
-        
-    } catch (error) {
-        console.error('Failed to update stats:', error);
-        
-        // Clear stats when offline
-        const elements = ['blockHeight', 'difficulty', 'hashrate', 'totalSupply', 'networkType', 'lastBlock'];
-        elements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '-';
-        });
-        
-        displayErrorOnPage(error.message);
-    }
-}
-
-// Update nodes section in the UI
-function updateNodesSection() {
-    const nodesGrid = document.getElementById('nodesGrid');
-    if (!nodesGrid) return;
-
-    // Clear existing nodes
-    nodesGrid.innerHTML = '';
-
-    // Create node cards
-    nodeStatus.forEach(node => {
-        const nodeCard = document.createElement('div');
-        nodeCard.classList.add('node-card');
-        
-        const statusColor = node.status === 'online' ? '#4CAF50' : '#ff0000';
-        
-        nodeCard.innerHTML = `
-            <div class="node-status" style="background-color: ${statusColor}"></div>
-            <h3>${node.url}</h3>
-            <p>Status: ${node.status}</p>
-            ${node.status === 'online' ? `
-                <p>Block Height: ${formatNumber(node.height)}</p>
-                <p>Difficulty: ${formatNumber(node.difficulty)}</p>
-                <p>Response Time: ${node.responseTime}ms</p>
-            ` : `
-                <p>Error: ${node.error}</p>
-            `}
-            <small>Last Checked: ${new Date(node.lastChecked).toLocaleString()}</small>
-        `;
-        
-        nodesGrid.appendChild(nodeCard);
-    });
-}
-
-// Make RPC call to a node with retries
-async function makeRPCCall(node, method, params = {}, retries = 3) {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-            console.log(`Attempt ${attempt}/${retries}: RPC call to ${node} with method: ${method}`);
-            
-            const requestData = {
-                jsonrpc: "2.0",
-                id: "0",
-                method: method,
-                params: params
-            };
-            
-            console.log('Request data:', JSON.stringify(requestData));
-            
-            const fetchOptions = {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(requestData),
-                mode: 'cors',
-                credentials: 'omit'
-            };
-            
-            console.log('Fetch options:', JSON.stringify(fetchOptions));
-            
-            const response = await fetch(node, fetchOptions);
-            
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-            
-            const responseText = await response.text();
-            console.log('Raw response:', responseText);
-            
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseError) {
-                const errorMessage = `JSON Parse Error: ${parseError.message}\nResponse Text: ${responseText}`;
-                console.error(errorMessage);
-                displayErrorOnPage(errorMessage);
-                logError(parseError, 'JSON Parse Error');
-                throw parseError;
-            }
-            
-            console.log('Parsed response data:', data);
-            
-            if (data.error) {
-                const errorMessage = `RPC Error: ${JSON.stringify(data.error)}`;
-                console.error(errorMessage);
-                displayErrorOnPage(errorMessage);
-                logError(new Error(errorMessage), 'RPC Error');
-                throw new Error(errorMessage);
-            }
-            
-            return data;
-        } catch (error) {
-            const errorMessage = `Network Error (Attempt ${attempt}): ${error.message}`;
-            console.error(errorMessage);
-            displayErrorOnPage(errorMessage);
-            logError(error, `Network Error (Attempt ${attempt})`);
-            
-            if (attempt === retries) {
-                throw new Error(`Failed after ${retries} attempts: ${error.message}`);
-            }
-            
-            // Exponential backoff with jitter
-            const baseDelay = 1000;
-            const jitter = Math.random() * 500;
-            const delay = Math.min(baseDelay * Math.pow(2, attempt - 1) + jitter, 5000);
-            
-            console.log(`Waiting ${delay}ms before next attempt`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-}
-
-// Utility function to track node status
-async function checkNodeStatus(node) {
-    try {
-        const startTime = Date.now();
-        const infoResponse = await makeRPCCall(node, "get_info", {});
-        const responseTime = Date.now() - startTime;
-
-        if (infoResponse && infoResponse.result) {
-            const info = infoResponse.result;
-            return {
-                url: node,
-                status: 'online',
-                height: info.height,
-                difficulty: info.difficulty,
-                responseTime: responseTime,
-                lastChecked: new Date().toISOString()
-            };
-        }
-    } catch (error) {
-        return {
-            url: node,
-            status: 'offline',
-            error: error.message,
-            lastChecked: new Date().toISOString()
-        };
-    }
-}
-
-// Initialize app with periodic updates
-function initializeApp() {
-    // Initial update immediately
-    updateStats();
+    let success = false;
     
-    // Set up periodic updates every 2 minutes (120,000 milliseconds)
-    setInterval(updateStats, REFRESH_INTERVAL);
+    for (const node of NODES) {
+        try {
+            const info = await makeRPCCall(node, 'get_info');
+            
+            // Calculate values
+            const hashrate = info.difficulty / DIFFICULTY_TARGET;
+            const blockTime = info.target || DIFFICULTY_TARGET;
+            
+            // Update UI
+            document.getElementById('blockHeight').textContent = formatNumber(info.height);
+            document.getElementById('hashrate').textContent = formatHashrate(hashrate);
+            document.getElementById('difficulty').textContent = formatNumber(info.difficulty);
+            document.getElementById('totalSupply').textContent = formatSAL(info.already_generated_coins);
+            document.getElementById('blockReward').textContent = formatSAL(info.base_reward);
+            document.getElementById('lastBlock').textContent = formatTimeAgo(info.timestamp);
+            document.getElementById('networkType').textContent = info.mainnet ? 'Mainnet' : 'Testnet';
+            
+            // Calculate emission rate (daily)
+            const emissionRate = (info.base_reward * 720) / info.already_generated_coins * 100;
+            document.getElementById('emissionRate').textContent = emissionRate.toFixed(2) + '%';
+            
+            // Update charts
+            updateCharts(blockTime, hashrate);
+            
+            success = true;
+            break;
+        } catch (error) {
+            console.error(`Failed to fetch from ${node}:`, error);
+            continue;
+        }
+    }
+    
+    if (!success) {
+        console.error('Failed to fetch data from all nodes');
+    }
 }
 
-// Call initialization when the page loads
+// Tab switching logic
+document.getElementById('networkLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('networkStats').style.display = 'block';
+    document.getElementById('stakingStats').style.display = 'none';
+    document.getElementById('networkLink').classList.add('active');
+    document.getElementById('stakingLink').classList.remove('active');
+});
+
+document.getElementById('stakingLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('networkStats').style.display = 'none';
+    document.getElementById('stakingStats').style.display = 'block';
+    document.getElementById('networkLink').classList.remove('active');
+    document.getElementById('stakingLink').classList.add('active');
+});
+
+// Initialize and start updates
 document.addEventListener('DOMContentLoaded', () => {
     initializeCharts();
-    initializeApp();
+    updateStats();
+    setInterval(updateStats, REFRESH_INTERVAL);
 });
