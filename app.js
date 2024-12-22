@@ -30,6 +30,7 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
             };
 
             console.log(`Attempt ${attempt}/${retries}: RPC call to ${node} with method: ${method}`);
+            console.log('Request data:', JSON.stringify(requestData));
             
             const response = await fetch(node, {
                 method: 'POST',
@@ -42,12 +43,22 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
                 credentials: 'omit'
             });
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response:', parseError);
+                console.error('Unparseable response text:', responseText);
+                throw new Error(`Failed to parse JSON response: ${parseError.message}`);
             }
             
-            const data = await response.json();
-            console.log(`Response data for ${method}:`, data);
+            console.log('Parsed response data:', data);
             
             if (data.error) {
                 throw new Error(`RPC error: ${JSON.stringify(data.error)}`);
@@ -56,10 +67,27 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
             return data;
         } catch (error) {
             console.error(`Attempt ${attempt} failed for ${method}:`, error);
+            
+            // Log specific error details
+            if (error instanceof TypeError) {
+                console.error('Network error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+            }
+            
             if (attempt === retries) {
                 throw new Error(`Failed after ${retries} attempts: ${error.message}`);
             }
-            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 5000)));
+            
+            // Exponential backoff with jitter
+            const baseDelay = 1000;
+            const jitter = Math.random() * 500;
+            const delay = Math.min(baseDelay * Math.pow(2, attempt - 1) + jitter, 5000);
+            
+            console.log(`Waiting ${delay}ms before next attempt`);
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
 }
@@ -77,7 +105,7 @@ async function updateStats() {
                 console.log(`Trying node: ${node}`);
                 
                 // Get network info
-                const infoResponse = await makeRPCCall(node, "get_info");
+                const infoResponse = await makeRPCCall(node, "get_info", {});
                 console.log('get_info response:', infoResponse);
                 
                 if (infoResponse && infoResponse.result) {
