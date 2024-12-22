@@ -1,6 +1,6 @@
 // RPC nodes
 const NODES = [
-    'http://172.245.110.15'  // VPS proxy server
+    'https://172.245.110.15.nip.io/json_rpc'  // VPS proxy server with HTTPS
 ];
 
 // Utility functions
