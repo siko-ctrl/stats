@@ -76,67 +76,124 @@ function logError(error, context = '') {
 
 // Utility function to manage historical data
 function updateHistoricalData(dataType, value) {
-    const maxDataPoints = 50; // Keep last 50 data points
+    console.log(`Updating historical data for ${dataType}:`, value);
+    
+    // Validate input
+    if (!historicalData[dataType]) {
+        console.warn(`Invalid data type: ${dataType}`);
+        return;
+    }
+    
+    // Ensure value is a number
+    const numericValue = Number(value);
+    if (isNaN(numericValue)) {
+        console.warn(`Invalid numeric value for ${dataType}:`, value);
+        return;
+    }
+    
+    // Add new data point
+    const maxDataPoints = 20; // Limit to last 20 data points
     historicalData[dataType].push({
-        timestamp: new Date().toISOString(),
-        value: value
+        timestamp: Date.now(),
+        value: numericValue
     });
-
+    
     // Trim historical data if it exceeds max points
     if (historicalData[dataType].length > maxDataPoints) {
         historicalData[dataType].shift();
     }
+    
+    console.log(`Updated ${dataType} historical data:`, historicalData[dataType]);
+    
+    // Trigger chart update
+    updateCharts();
 }
 
 // Create or update charts
 function updateCharts() {
+    console.log('Updating charts...');
+    console.log('Historical Data:', historicalData);
+    console.log('Window.Chart:', window.Chart);
+
+    // Destroy existing charts to prevent multiple instances
+    if (window.blockHeightChartInstance) {
+        window.blockHeightChartInstance.destroy();
+    }
+    if (window.hashrateChartInstance) {
+        window.hashrateChartInstance.destroy();
+    }
+
     // Block Height Chart
     const blockHeightChart = document.getElementById('blockHeightChart');
-    if (blockHeightChart && window.Chart) {
-        new window.Chart(blockHeightChart, {
-            type: 'line',
-            data: {
-                labels: historicalData.blockHeight.map(d => new Date(d.timestamp).toLocaleTimeString()),
-                datasets: [{
-                    label: 'Block Height',
-                    data: historicalData.blockHeight.map(d => d.value),
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: false
+    if (blockHeightChart && window.Chart && historicalData.blockHeight.length > 0) {
+        try {
+            window.blockHeightChartInstance = new window.Chart(blockHeightChart, {
+                type: 'line',
+                data: {
+                    labels: historicalData.blockHeight.map(d => new Date(d.timestamp).toLocaleTimeString()),
+                    datasets: [{
+                        label: 'Block Height',
+                        data: historicalData.blockHeight.map(d => d.value),
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
                     }
                 }
-            }
+            });
+            console.log('Block Height Chart created successfully');
+        } catch (error) {
+            console.error('Error creating Block Height Chart:', error);
+        }
+    } else {
+        console.warn('Cannot create Block Height Chart:', {
+            chartElement: !!blockHeightChart,
+            chartLibrary: !!window.Chart,
+            historicalDataLength: historicalData.blockHeight.length
         });
     }
 
     // Hashrate Chart
     const hashrateChart = document.getElementById('hashrateChart');
-    if (hashrateChart && window.Chart) {
-        new window.Chart(hashrateChart, {
-            type: 'line',
-            data: {
-                labels: historicalData.hashrate.map(d => new Date(d.timestamp).toLocaleTimeString()),
-                datasets: [{
-                    label: 'Network Hashrate',
-                    data: historicalData.hashrate.map(d => d.value),
-                    borderColor: 'rgb(255, 99, 132)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
+    if (hashrateChart && window.Chart && historicalData.hashrate.length > 0) {
+        try {
+            window.hashrateChartInstance = new window.Chart(hashrateChart, {
+                type: 'line',
+                data: {
+                    labels: historicalData.hashrate.map(d => new Date(d.timestamp).toLocaleTimeString()),
+                    datasets: [{
+                        label: 'Network Hashrate',
+                        data: historicalData.hashrate.map(d => d.value),
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
+            });
+            console.log('Hashrate Chart created successfully');
+        } catch (error) {
+            console.error('Error creating Hashrate Chart:', error);
+        }
+    } else {
+        console.warn('Cannot create Hashrate Chart:', {
+            chartElement: !!hashrateChart,
+            chartLibrary: !!window.Chart,
+            historicalDataLength: historicalData.hashrate.length
         });
     }
 }
