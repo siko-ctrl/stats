@@ -46,6 +46,9 @@ header {
     transform: translateY(-50%);
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .status-dot {
@@ -317,6 +320,12 @@ h1 {
     background: linear-gradient(45deg, var(--accent-color), var(--text-color));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.last-update {
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.6);
+    margin-left: 1rem;
 }
 
 @media (max-width: 768px) {
