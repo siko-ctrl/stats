@@ -29,30 +29,34 @@ const COLORS = {
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: {
-        duration: 750,
-        easing: 'easeInOutQuart'
+    animation: false,
+    interaction: {
+        intersect: false,
+        mode: 'index'
     },
     scales: {
         x: {
             grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
+                color: 'rgba(255, 255, 255, 0.1)',
+                drawBorder: false
             },
             ticks: {
-                color: COLORS.text,
+                color: COLORS.textSecondary,
                 font: {
-                    family: 'Inter'
-                }
+                    size: 12
+                },
+                maxRotation: 0
             }
         },
         y: {
             grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
+                color: 'rgba(255, 255, 255, 0.1)',
+                drawBorder: false
             },
             ticks: {
-                color: COLORS.text,
+                color: COLORS.textSecondary,
                 font: {
-                    family: 'Inter'
+                    size: 12
                 }
             },
             beginAtZero: true
@@ -71,13 +75,23 @@ const chartOptions = {
             padding: 12,
             displayColors: false,
             titleFont: {
-                family: 'Inter',
                 size: 14,
                 weight: 600
             },
             bodyFont: {
-                family: 'Inter',
                 size: 12
+            },
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                        label += context.parsed.y.toFixed(2);
+                    }
+                    return label;
+                }
             }
         }
     }
@@ -128,23 +142,30 @@ function initializeCharts() {
     const ctx2 = document.getElementById('hashrateChart').getContext('2d');
 
     // Initialize with empty data
-    const emptyData = Array(CHART_POINTS).fill(0);
+    const emptyData = Array(CHART_POINTS).fill(null);
     const emptyLabels = Array(CHART_POINTS).fill('');
+
+    const commonDatasetConfig = {
+        borderColor: COLORS.primary,
+        backgroundColor: 'rgba(10, 235, 133, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: COLORS.primary,
+        pointHoverBorderColor: COLORS.primary,
+        pointHoverBorderWidth: 2
+    };
 
     blockTimeChart = new Chart(ctx1, {
         type: 'line',
         data: {
             labels: emptyLabels,
             datasets: [{
+                ...commonDatasetConfig,
                 data: emptyData,
-                borderColor: COLORS.primary,
-                backgroundColor: 'rgba(10, 235, 133, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                pointHoverBackgroundColor: COLORS.primary
+                label: 'Block Time'
             }]
         },
         options: chartOptions
@@ -155,15 +176,9 @@ function initializeCharts() {
         data: {
             labels: emptyLabels,
             datasets: [{
+                ...commonDatasetConfig,
                 data: emptyData,
-                borderColor: COLORS.primary,
-                backgroundColor: 'rgba(10, 235, 133, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                pointHoverBackgroundColor: COLORS.primary
+                label: 'Network Hashrate'
             }]
         },
         options: chartOptions
@@ -185,7 +200,7 @@ function updateCharts(blockTime, hashrate) {
     blockTimeChart.update('none');
     
     // Update hashrate chart
-    hashrateData.push({ x: timestamp, y: hashrate });
+    hashrateData.push({ x: timestamp, y: hashrate / 1000000 }); // Convert to MH/s
     if (hashrateData.length > CHART_POINTS) hashrateData.shift();
     
     hashrateChart.data.labels = hashrateData.map(point => point.x);
