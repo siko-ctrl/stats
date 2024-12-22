@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salvium Network Statistics</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Salvium Network Statistics</h1>
+            <div class="network-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Network Status</span>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-cube"></i>
+                <h3>Block Height</h3>
+                <p id="blockHeight">-</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-network-wired"></i>
+                <h3>Network Hashrate</h3>
+                <p id="hashrate">-</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-coins"></i>
+                <h3>Total Supply</h3>
+                <p id="totalSupply">-</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-chart-line"></i>
+                <h3>Difficulty</h3>
+                <p id="difficulty">-</p>
+            </div>
+        </div>
+
+        <div class="nodes-section">
+            <h2>Node Status</h2>
+            <div class="nodes-grid" id="nodesGrid">
+                <!-- Nodes will be populated here -->
+            </div>
+        </div>
+
+        <div class="yield-section">
+            <h2>Yield Information</h2>
+            <div class="yield-stats" id="yieldStats">
+                <!-- Yield info will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Powered by Salvium Network</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
