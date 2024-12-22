@@ -13,6 +13,48 @@ const GENESIS_BLOCK_REWARD = 6000000000000;
 const MINIMUM_FEE = 100000;
 const COIN = 100000000;
 
+// Constants
+const REFRESH_INTERVAL = 120000; // 2 minutes
+const CHART_POINTS = 20;
+const COLORS = {
+    primary: '#0AEB85',
+    secondary: '#181818',
+    white: '#FFFFFF'
+};
+
+// Chart configurations
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+        duration: 750,
+        easing: 'easeInOutQuart'
+    },
+    scales: {
+        x: {
+            grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+                color: COLORS.white
+            }
+        },
+        y: {
+            grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+                color: COLORS.white
+            }
+        }
+    },
+    plugins: {
+        legend: {
+            display: false
+        }
+    }
+};
+
 // Global state for historical data and node tracking
 const historicalData = {
     blockHeight: [],
@@ -22,6 +64,10 @@ const historicalData = {
 };
 
 const nodeStatus = [];
+
+// Initialize charts
+let blockTimeChart, hashrateChart;
+let blockTimeData = [], hashrateData = [];
 
 // Utility functions to log errors to the UI
 function displayErrorOnPage(message) {
@@ -148,120 +194,235 @@ function updateHistoricalData(dataType, value) {
     updateCharts();
 }
 
-// Create or update charts
-function updateCharts() {
-    console.log('Updating charts...');
-    console.log('Historical Data:', historicalData);
-    console.log('Window.Chart:', window.Chart);
+// Initialize charts
+function initializeCharts() {
+    const ctx1 = document.getElementById('blockTimeChart').getContext('2d');
+    const ctx2 = document.getElementById('hashrateChart').getContext('2d');
 
-    // Destroy existing charts to prevent multiple instances
-    if (window.blockHeightChartInstance) {
-        window.blockHeightChartInstance.destroy();
-    }
-    if (window.hashrateChartInstance) {
-        window.hashrateChartInstance.destroy();
-    }
+    blockTimeChart = new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: Array(CHART_POINTS).fill(''),
+            datasets: [{
+                data: Array(CHART_POINTS).fill(0),
+                borderColor: COLORS.primary,
+                backgroundColor: 'rgba(10, 235, 133, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: chartOptions
+    });
 
-    // Block Height Chart
-    const blockHeightChart = document.getElementById('blockHeightChart');
-    if (blockHeightChart && window.Chart && historicalData.blockHeight.length > 0) {
-        try {
-            window.blockHeightChartInstance = new window.Chart(blockHeightChart, {
-                type: 'line',
-                data: {
-                    labels: historicalData.blockHeight.map(d => new Date(d.timestamp).toLocaleTimeString()),
-                    datasets: [{
-                        label: 'Block Height',
-                        data: historicalData.blockHeight.map(d => d.value),
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: false
-                        }
-                    }
-                }
-            });
-            console.log('Block Height Chart created successfully');
-        } catch (error) {
-            console.error('Error creating Block Height Chart:', error);
-        }
-    } else {
-        console.warn('Cannot create Block Height Chart:', {
-            chartElement: !!blockHeightChart,
-            chartLibrary: !!window.Chart,
-            historicalDataLength: historicalData.blockHeight.length
-        });
-    }
+    hashrateChart = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: Array(CHART_POINTS).fill(''),
+            datasets: [{
+                data: Array(CHART_POINTS).fill(0),
+                borderColor: COLORS.primary,
+                backgroundColor: 'rgba(10, 235, 133, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: chartOptions
+    });
+};
 
-    // Hashrate Chart
-    const hashrateChart = document.getElementById('hashrateChart');
-    if (hashrateChart && window.Chart && historicalData.hashrate.length > 0) {
-        try {
-            window.hashrateChartInstance = new window.Chart(hashrateChart, {
-                type: 'line',
-                data: {
-                    labels: historicalData.hashrate.map(d => new Date(d.timestamp).toLocaleTimeString()),
-                    datasets: [{
-                        label: 'Network Hashrate',
-                        data: historicalData.hashrate.map(d => d.value),
-                        borderColor: 'rgb(255, 99, 132)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-            console.log('Hashrate Chart created successfully');
-        } catch (error) {
-            console.error('Error creating Hashrate Chart:', error);
-        }
-    } else {
-        console.warn('Cannot create Hashrate Chart:', {
-            chartElement: !!hashrateChart,
-            chartLibrary: !!window.Chart,
-            historicalDataLength: historicalData.hashrate.length
-        });
+// Format hashrate to human readable format
+function formatHashrate(hashrate) {
+    const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s'];
+    let unitIndex = 0;
+    
+    while (hashrate >= 1000 && unitIndex < units.length - 1) {
+        hashrate /= 1000;
+        unitIndex++;
     }
-}
+    
+    return `${hashrate.toFixed(2)} ${units[unitIndex]}`;
+};
 
-// Utility function to track node status
-async function checkNodeStatus(node) {
+// Format SAL amount
+function formatSAL(amount) {
+    return (amount / 1e8).toFixed(2) + ' SAL';
+};
+
+// Format time ago
+function formatTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    
+    if (seconds < 60) return `${seconds} seconds ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return `${Math.floor(seconds / 86400)} days ago`;
+};
+
+// Update chart data
+function updateCharts(blockTime, hashrate) {
+    const timestamp = new Date().toLocaleTimeString();
+    
+    // Update block time chart
+    blockTimeData.push({ x: timestamp, y: blockTime });
+    if (blockTimeData.length > CHART_POINTS) blockTimeData.shift();
+    
+    blockTimeChart.data.labels = blockTimeData.map(point => point.x);
+    blockTimeChart.data.datasets[0].data = blockTimeData.map(point => point.y);
+    blockTimeChart.update();
+    
+    // Update hashrate chart
+    hashrateData.push({ x: timestamp, y: hashrate });
+    if (hashrateData.length > CHART_POINTS) hashrateData.shift();
+    
+    hashrateChart.data.labels = hashrateData.map(point => point.x);
+    hashrateChart.data.datasets[0].data = hashrateData.map(point => point.y);
+    hashrateChart.update();
+};
+
+// Update network stats
+async function updateStats() {
     try {
-        const startTime = Date.now();
-        const infoResponse = await makeRPCCall(node, "get_info", {});
-        const responseTime = Date.now() - startTime;
-
-        if (infoResponse && infoResponse.result) {
-            const info = infoResponse.result;
-            return {
-                url: node,
-                status: 'online',
-                height: info.height,
-                difficulty: info.difficulty,
-                responseTime: responseTime,
-                lastChecked: new Date().toISOString()
-            };
+        // Check status of all nodes
+        nodeStatus.length = 0;
+        const nodeStatusPromises = NODES.map(checkNodeStatus);
+        const nodeResults = await Promise.all(nodeStatusPromises);
+        nodeStatus.push(...nodeResults.filter(result => result));
+        
+        // Update nodes section
+        updateNodesSection();
+        
+        let success = false;
+        for (const node of NODES) {
+            try {
+                console.log(`Trying node: ${node}`);
+                
+                const infoResponse = await makeRPCCall(node, "get_info", {});
+                console.log('get_info response:', infoResponse);
+                
+                if (infoResponse && infoResponse.result) {
+                    const info = infoResponse.result;
+                    
+                    // Calculate values
+                    const blockHeight = info.height;
+                    const difficulty = info.difficulty;
+                    const hashrate = difficulty / DIFFICULTY_TARGET;
+                    const supply = calculateSupply(blockHeight);
+                    const reward = calculateBlockReward(supply);
+                    
+                    // Update UI elements
+                    document.getElementById('blockHeight').textContent = formatNumber(blockHeight);
+                    document.getElementById('difficulty').textContent = formatNumber(difficulty);
+                    document.getElementById('hashrate').textContent = formatHashrate(hashrate);
+                    document.getElementById('totalSupply').textContent = `${formatNumber(formatSAL(supply))} SAL`;
+                    document.getElementById('networkType').textContent = 'Mainnet';
+                    document.getElementById('lastBlock').textContent = new Date().toLocaleString();
+                    
+                    // Update historical data
+                    updateHistoricalData('blockHeight', blockHeight);
+                    updateHistoricalData('hashrate', hashrate);
+                    updateHistoricalData('totalSupply', supply);
+                    
+                    // Update yield section
+                    const yieldSection = document.getElementById('yieldSection');
+                    if (yieldSection) {
+                        const yearlyBlocks = (365 * 24 * 60 * 60) / DIFFICULTY_TARGET;
+                        const yearlyEmission = yearlyBlocks * reward;
+                        const inflationRate = (yearlyEmission / supply) * 100;
+                        
+                        yieldSection.innerHTML = `
+                            <div class="yield-stats">
+                                <div class="stat-card">
+                                    <i class="fas fa-coins"></i>
+                                    <h3>Block Reward</h3>
+                                    <p>${formatSAL(reward)} SAL</p>
+                                </div>
+                                <div class="stat-card">
+                                    <i class="fas fa-chart-line"></i>
+                                    <h3>Yearly Emission</h3>
+                                    <p>${formatSAL(yearlyEmission)} SAL</p>
+                                </div>
+                                <div class="stat-card">
+                                    <i class="fas fa-percentage"></i>
+                                    <h3>Inflation Rate</h3>
+                                    <p>${inflationRate.toFixed(2)}%</p>
+                                </div>
+                                <div class="stat-card">
+                                    <i class="fas fa-piggy-bank"></i>
+                                    <h3>Current Supply</h3>
+                                    <p>${formatSAL(supply)} SAL</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Update blockchain info
+                    const blockchainInfoSection = document.getElementById('blockchainInfo');
+                    if (blockchainInfoSection) {
+                        blockchainInfoSection.innerHTML = `
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <i class="fas fa-link"></i>
+                                    <h3>Block Height</h3>
+                                    <p>${formatNumber(blockHeight)}</p>
+                                </div>
+                                <div class="info-card">
+                                    <i class="fas fa-chart-line"></i>
+                                    <h3>Network Difficulty</h3>
+                                    <p>${formatNumber(difficulty)}</p>
+                                </div>
+                                <div class="info-card">
+                                    <i class="fas fa-clock"></i>
+                                    <h3>Block Time</h3>
+                                    <p>${DIFFICULTY_TARGET} seconds</p>
+                                </div>
+                                <div class="info-card">
+                                    <i class="fas fa-network-wired"></i>
+                                    <h3>Network Hashrate</h3>
+                                    <p>${formatHashrate(hashrate)}</p>
+                                </div>
+                                <div class="info-card">
+                                    <i class="fas fa-coins"></i>
+                                    <h3>Circulating Supply</h3>
+                                    <p>${formatSAL(supply)} SAL</p>
+                                </div>
+                                <div class="info-card">
+                                    <i class="fas fa-globe"></i>
+                                    <h3>Network Version</h3>
+                                    <p>${info.version || 'Unknown'}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Update charts
+                    updateCharts(info.block_time || 120, hashrate);
+                    
+                    console.log('Stats updated successfully');
+                    success = true;
+                    break;
+                }
+            } catch (error) {
+                console.error(`Failed to update stats from node ${node}:`, error);
+            }
         }
+        
+        if (!success) {
+            throw new Error('All nodes failed to respond');
+        }
+        
     } catch (error) {
-        return {
-            url: node,
-            status: 'offline',
-            error: error.message,
-            lastChecked: new Date().toISOString()
-        };
+        console.error('Failed to update stats:', error);
+        
+        // Clear stats when offline
+        const elements = ['blockHeight', 'difficulty', 'hashrate', 'totalSupply', 'networkType', 'lastBlock'];
+        elements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '-';
+        });
+        
+        displayErrorOnPage(error.message);
     }
 }
 
@@ -377,165 +538,31 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
     }
 }
 
-// Update network stats
-async function updateStats() {
-    console.log('=== Starting updateStats ===');
-    const statusDot = document.querySelector('.status-dot');
-    const statusText = document.querySelector('.status-text');
-    const lastUpdateEl = document.getElementById('lastUpdate');
-    
-    // Add last update timestamp
-    if (lastUpdateEl) {
-        lastUpdateEl.textContent = `Last Updated: ${new Date().toLocaleString()}`;
-    }
-    
+// Utility function to track node status
+async function checkNodeStatus(node) {
     try {
-        // Check status of all nodes
-        nodeStatus.length = 0;
-        const nodeStatusPromises = NODES.map(checkNodeStatus);
-        const nodeResults = await Promise.all(nodeStatusPromises);
-        nodeStatus.push(...nodeResults.filter(result => result));
-        
-        // Update nodes section
-        updateNodesSection();
-        
-        let success = false;
-        for (const node of NODES) {
-            try {
-                console.log(`Trying node: ${node}`);
-                
-                const infoResponse = await makeRPCCall(node, "get_info", {});
-                console.log('get_info response:', infoResponse);
-                
-                if (infoResponse && infoResponse.result) {
-                    const info = infoResponse.result;
-                    
-                    // Calculate values
-                    const blockHeight = info.height;
-                    const difficulty = info.difficulty;
-                    const hashrate = difficulty / DIFFICULTY_TARGET;
-                    const supply = calculateSupply(blockHeight);
-                    const reward = calculateBlockReward(supply);
-                    
-                    // Update UI elements
-                    document.getElementById('blockHeight').textContent = formatNumber(blockHeight);
-                    document.getElementById('difficulty').textContent = formatNumber(difficulty);
-                    document.getElementById('hashrate').textContent = formatHashrate(hashrate);
-                    document.getElementById('totalSupply').textContent = `${formatNumber(formatSAL(supply))} SAL`;
-                    document.getElementById('networkType').textContent = 'Mainnet';
-                    document.getElementById('lastBlock').textContent = new Date().toLocaleString();
-                    
-                    // Update historical data
-                    updateHistoricalData('blockHeight', blockHeight);
-                    updateHistoricalData('hashrate', hashrate);
-                    updateHistoricalData('totalSupply', supply);
-                    
-                    // Update yield section
-                    const yieldSection = document.getElementById('yieldSection');
-                    if (yieldSection) {
-                        const yearlyBlocks = (365 * 24 * 60 * 60) / DIFFICULTY_TARGET;
-                        const yearlyEmission = yearlyBlocks * reward;
-                        const inflationRate = (yearlyEmission / supply) * 100;
-                        
-                        yieldSection.innerHTML = `
-                            <div class="yield-stats">
-                                <div class="stat-card">
-                                    <i class="fas fa-coins"></i>
-                                    <h3>Block Reward</h3>
-                                    <p>${formatSAL(reward)} SAL</p>
-                                </div>
-                                <div class="stat-card">
-                                    <i class="fas fa-chart-line"></i>
-                                    <h3>Yearly Emission</h3>
-                                    <p>${formatSAL(yearlyEmission)} SAL</p>
-                                </div>
-                                <div class="stat-card">
-                                    <i class="fas fa-percentage"></i>
-                                    <h3>Inflation Rate</h3>
-                                    <p>${inflationRate.toFixed(2)}%</p>
-                                </div>
-                                <div class="stat-card">
-                                    <i class="fas fa-piggy-bank"></i>
-                                    <h3>Current Supply</h3>
-                                    <p>${formatSAL(supply)} SAL</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    // Update blockchain info
-                    const blockchainInfoSection = document.getElementById('blockchainInfo');
-                    if (blockchainInfoSection) {
-                        blockchainInfoSection.innerHTML = `
-                            <div class="info-grid">
-                                <div class="info-card">
-                                    <i class="fas fa-link"></i>
-                                    <h3>Block Height</h3>
-                                    <p>${formatNumber(blockHeight)}</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-chart-line"></i>
-                                    <h3>Network Difficulty</h3>
-                                    <p>${formatNumber(difficulty)}</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-clock"></i>
-                                    <h3>Block Time</h3>
-                                    <p>${DIFFICULTY_TARGET} seconds</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-network-wired"></i>
-                                    <h3>Network Hashrate</h3>
-                                    <p>${formatHashrate(hashrate)}</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-coins"></i>
-                                    <h3>Circulating Supply</h3>
-                                    <p>${formatSAL(supply)} SAL</p>
-                                </div>
-                                <div class="info-card">
-                                    <i class="fas fa-globe"></i>
-                                    <h3>Network Version</h3>
-                                    <p>${info.version || 'Unknown'}</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    // Update status
-                    statusDot.style.backgroundColor = '#00ff00';
-                    statusText.textContent = 'Connected';
-                    
-                    // Update charts
-                    updateCharts();
-                    
-                    console.log('Stats updated successfully');
-                    success = true;
-                    break;
-                }
-            } catch (error) {
-                console.error(`Failed to update stats from node ${node}:`, error);
-            }
+        const startTime = Date.now();
+        const infoResponse = await makeRPCCall(node, "get_info", {});
+        const responseTime = Date.now() - startTime;
+
+        if (infoResponse && infoResponse.result) {
+            const info = infoResponse.result;
+            return {
+                url: node,
+                status: 'online',
+                height: info.height,
+                difficulty: info.difficulty,
+                responseTime: responseTime,
+                lastChecked: new Date().toISOString()
+            };
         }
-        
-        if (!success) {
-            throw new Error('All nodes failed to respond');
-        }
-        
     } catch (error) {
-        console.error('Failed to update stats:', error);
-        
-        statusDot.style.backgroundColor = '#ff0000';
-        statusText.textContent = 'Connection Error';
-        
-        // Clear stats when offline
-        const elements = ['blockHeight', 'difficulty', 'hashrate', 'totalSupply', 'networkType', 'lastBlock'];
-        elements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '-';
-        });
-        
-        displayErrorOnPage(error.message);
+        return {
+            url: node,
+            status: 'offline',
+            error: error.message,
+            lastChecked: new Date().toISOString()
+        };
     }
 }
 
@@ -545,8 +572,11 @@ function initializeApp() {
     updateStats();
     
     // Set up periodic updates every 2 minutes (120,000 milliseconds)
-    setInterval(updateStats, 120000);
+    setInterval(updateStats, REFRESH_INTERVAL);
 }
 
 // Call initialization when the page loads
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeCharts();
+    initializeApp();
+});

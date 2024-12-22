@@ -1,13 +1,13 @@
 :root {
-    --primary-color: #6e00ff;
-    --secondary-color: #4a00cc;
-    --background-color: #f4f4f4;
-    --text-color: #333;
-    --border-color: rgba(110, 0, 255, 0.2);
+    --primary-color: #0AEB85;
+    --secondary-color: #181818;
+    --text-color: #181818;
+    --border-color: rgba(10, 235, 133, 0.2);
+    --success-color: #0AEB85;
+    --error-color: #ff4136;
+    --background-color: #FFF;
     --accent-color: #00f6ff;
     --card-background: #1a1a1a;
-    --success-color: #4CAF50;
-    --error-color: #ff0000;
 }
 
 * {
@@ -17,7 +17,7 @@
 }
 
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
@@ -75,15 +75,16 @@ header {
 
 .stat-card {
     background-color: white;
-    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     padding: 1rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
     text-align: center;
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-2px);
 }
 
 .stat-card i {
@@ -94,13 +95,16 @@ header {
 }
 
 .stat-card h3 {
-    margin-bottom: 0.5rem;
     color: var(--secondary-color);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
 }
 
 .stat-card p {
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     font-weight: bold;
+    color: var(--primary-color);
 }
 
 .charts-container {
@@ -113,9 +117,10 @@ header {
 
 .chart-card {
     background-color: white;
-    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     padding: 1rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
 }
 
 .chart-card h3 {
@@ -167,7 +172,7 @@ th, td {
 }
 
 th {
-    background-color: rgba(110, 0, 255, 0.1);
+    background-color: rgba(10, 235, 133, 0.1);
     color: var(--accent-color);
 }
 
@@ -196,50 +201,41 @@ th {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
+    margin-top: 1rem;
 }
 
 .node-card {
-    background-color: rgba(110, 0, 255, 0.05);
+    background-color: white;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1rem;
     position: relative;
-    transition: transform 0.3s ease;
-}
-
-.node-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
 .node-status {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 12px;
-    height: 12px;
+    top: 1rem;
+    right: 1rem;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
 }
 
-.node-card h3 {
-    color: var(--primary-color);
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-    word-break: break-all;
+.node-status.online {
+    background-color: var(--success-color);
 }
 
-.node-card p {
-    margin-bottom: 0.25rem;
-    font-size: 0.9rem;
-    color: var(--text-color);
+.node-status.offline {
+    background-color: var(--error-color);
 }
 
-.node-card small {
-    display: block;
+.node-info {
     margin-top: 0.5rem;
-    font-size: 0.7rem;
-    color: rgba(0, 0, 0, 0.5);
-    text-align: right;
+}
+
+.node-info p {
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
 }
 
 .yield-stats {
@@ -279,7 +275,7 @@ th {
 }
 
 .info-grid .info-card, .yield-stats .stat-card {
-    background-color: rgba(110, 0, 255, 0.05);
+    background-color: rgba(10, 235, 133, 0.05);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1rem;
@@ -350,5 +346,14 @@ h1 {
     }
     .yield-stats, .info-grid {
         grid-template-columns: 1fr;
+    }
+    .stat-card {
+        font-size: 1.25rem;
+    }
+    .stat-item {
+        flex-direction: column;
+    }
+    .stat-item .value {
+        margin-top: 0.25rem;
     }
 }

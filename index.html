@@ -6,92 +6,151 @@
     <title>Salvium Network Statistics</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="https://siko-ctrl.github.io/salvium/assets/img/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="public/Salvium_assets/coin_icon/black/favicon.ico">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Salvium Network Statistics</h1>
-            <div class="network-status">
-                <span class="status-dot"></span>
-                <span class="status-text">Connecting...</span>
-                <span id="lastUpdate" class="last-update"></span>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="public/Salvium_assets/wordmark_logo/white/salvium_wordmark_white.svg" alt="Salvium" height="30">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="networkLink">Network</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="stakingLink">Staking</a>
+                    </li>
+                </ul>
             </div>
-        </header>
+        </div>
+    </nav>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <i class="fas fa-cube"></i>
-                <h3>Block Height</h3>
-                <p id="blockHeight">Loading...</p>
+    <div class="container mt-4">
+        <!-- Network Stats Section -->
+        <div id="networkStats">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Block Height</h5>
+                            <p class="card-text" id="blockHeight">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Network Hashrate</h5>
+                            <p class="card-text" id="hashrate">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Difficulty</h5>
+                            <p class="card-text" id="difficulty">Loading...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <i class="fas fa-network-wired"></i>
-                <h3>Network Hashrate</h3>
-                <p id="hashrate">Loading...</p>
+
+            <!-- Charts Section -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Block Time</h5>
+                            <canvas id="blockTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Network Hashrate</h5>
+                            <canvas id="hashrateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <i class="fas fa-coins"></i>
-                <h3>Total Supply</h3>
-                <p id="totalSupply">Loading...</p>
+
+            <!-- Supply Stats -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Supply Statistics</h5>
+                            <div class="supply-stats">
+                                <div class="stat-item">
+                                    <span class="label">Current Supply:</span>
+                                    <span class="value" id="totalSupply">Loading...</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">Block Reward:</span>
+                                    <span class="value" id="blockReward">Loading...</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">Emission Rate:</span>
+                                    <span class="value" id="emissionRate">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Network Statistics</h5>
+                            <div class="network-stats">
+                                <div class="stat-item">
+                                    <span class="label">Block Time:</span>
+                                    <span class="value" id="blockTime">120 seconds</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">Last Block:</span>
+                                    <span class="value" id="lastBlock">Loading...</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">Network Type:</span>
+                                    <span class="value" id="networkType">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <i class="fas fa-globe"></i>
-                <h3>Network Type</h3>
-                <p id="networkType">Loading...</p>
-            </div>
-            <div class="stat-card">
-                <i class="fas fa-clock"></i>
-                <h3>Last Block</h3>
-                <p id="lastBlock">Loading...</p>
-            </div>
-            <div class="stat-card">
-                <i class="fas fa-chart-line"></i>
-                <h3>Network Difficulty</h3>
-                <p id="difficulty">Loading...</p>
+
+            <!-- Node Status Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Node Status</h5>
+                            <div id="nodesGrid" class="nodes-grid"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="charts-container">
-            <div class="chart-card">
-                <h3>Block Height Trend</h3>
-                <canvas id="blockHeightChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h3>Network Hashrate Trend</h3>
-                <canvas id="hashrateChart"></canvas>
-            </div>
+        <!-- Staking Stats Section (Hidden by default) -->
+        <div id="stakingStats" style="display: none;">
+            <!-- Staking content will be added later -->
         </div>
-
-        <div class="nodes-section">
-            <h2>Node Status</h2>
-            <div class="nodes-grid" id="nodesGrid">
-                <!-- Nodes will be populated here -->
-            </div>
-        </div>
-
-        <section class="yield-section">
-            <h2>Yield Statistics</h2>
-            <div id="yieldSection">
-                <!-- Yield stats will be populated here -->
-            </div>
-        </section>
-
-        <section class="blockchain-info">
-            <h2>Blockchain Information</h2>
-            <div id="blockchainInfo">
-                <!-- Blockchain info will be populated here -->
-            </div>
-        </section>
-
-        <div id="error-display" class="error-display"></div>
     </div>
 
-    <footer>
-        <p>Powered by Salvium Network</p>
-    </footer>
-
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
