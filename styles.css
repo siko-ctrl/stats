@@ -249,6 +249,59 @@ th {
     margin-bottom: 0.5rem;
 }
 
+.yield-section, .blockchain-info {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.yield-section h2, .blockchain-info h2 {
+    text-align: center;
+    color: var(--secondary-color);
+    margin-bottom: 1.5rem;
+}
+
+.yield-stats, .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.info-grid .info-card, .yield-stats .stat-card {
+    background-color: rgba(110, 0, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.info-grid .info-card:hover, .yield-stats .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.info-grid .info-card i, .yield-stats .stat-card i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.info-grid .info-card h3, .yield-stats .stat-card h3 {
+    font-size: 1rem;
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+.info-grid .info-card p, .yield-stats .stat-card p {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
 h1, h2, h3 {
     margin-bottom: 1rem;
 }
@@ -278,6 +331,9 @@ h1 {
         padding: 0.5rem;
     }
     .nodes-grid {
+        grid-template-columns: 1fr;
+    }
+    .yield-stats, .info-grid {
         grid-template-columns: 1fr;
     }
 }

@@ -281,6 +281,99 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
     }
 }
 
+// Yield calculation function
+function calculateYieldStats(blockHeight) {
+    // Placeholder yield calculations - adjust based on actual Salvium tokenomics
+    const baseBlockReward = 50; // SAL per block
+    const annualBlockCount = 525600; // Blocks per year (assuming 1 block per minute)
+    
+    const yearlyEmission = baseBlockReward * annualBlockCount;
+    const currentSupply = (blockHeight * baseBlockReward) + 1000000; // Initial supply
+    
+    const inflationRate = (yearlyEmission / currentSupply) * 100;
+    
+    return {
+        blockReward: baseBlockReward,
+        yearlyEmission: yearlyEmission,
+        currentSupply: currentSupply,
+        inflationRate: inflationRate.toFixed(2)
+    };
+}
+
+// Update yield section in the UI
+function updateYieldSection(blockHeight) {
+    const yieldStats = calculateYieldStats(blockHeight);
+    
+    const yieldSection = document.getElementById('yieldSection');
+    if (!yieldSection) return;
+    
+    yieldSection.innerHTML = `
+        <div class="yield-stats">
+            <div class="stat-card">
+                <i class="fas fa-coins"></i>
+                <h3>Block Reward</h3>
+                <p>${formatNumber(yieldStats.blockReward)} SAL</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-chart-line"></i>
+                <h3>Yearly Emission</h3>
+                <p>${formatNumber(yieldStats.yearlyEmission)} SAL</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-percentage"></i>
+                <h3>Inflation Rate</h3>
+                <p>${yieldStats.inflationRate}%</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-piggy-bank"></i>
+                <h3>Current Supply</h3>
+                <p>${formatNumber(yieldStats.currentSupply)} SAL</p>
+            </div>
+        </div>
+    `;
+}
+
+// Blockchain information tracking
+function updateBlockchainInfo(info) {
+    const blockchainInfoSection = document.getElementById('blockchainInfo');
+    if (!blockchainInfoSection) return;
+    
+    blockchainInfoSection.innerHTML = `
+        <div class="info-grid">
+            <div class="info-card">
+                <i class="fas fa-link"></i>
+                <h3>Block Height</h3>
+                <p>${formatNumber(info.height)}</p>
+            </div>
+            <div class="info-card">
+                <i class="fas fa-chart-line"></i>
+                <h3>Network Difficulty</h3>
+                <p>${formatNumber(info.difficulty)}</p>
+            </div>
+            <div class="info-card">
+                <i class="fas fa-clock"></i>
+                <h3>Last Block Timestamp</h3>
+                <p>${new Date(info.timestamp * 1000).toLocaleString()}</p>
+            </div>
+            <div class="info-card">
+                <i class="fas fa-network-wired"></i>
+                <h3>Network Hashrate</h3>
+                <p>${formatHashrate(info.difficulty / 120)}</p>
+            </div>
+            <div class="info-card">
+                <i class="fas fa-coins"></i>
+                <h3>Circulating Supply</h3>
+                <p>${formatNumber((info.height * 50) + 1000000)} SAL</p>
+            </div>
+            <div class="info-card">
+                <i class="fas fa-globe"></i>
+                <h3>Network Version</h3>
+                <p>${info.version || 'Unknown'}</p>
+            </div>
+        </div>
+    `;
+}
+
 // Update network stats
 async function updateStats() {
     console.log('=== Starting updateStats ===');
@@ -291,7 +384,6 @@ async function updateStats() {
     if (!statusDot || !statusText) {
         console.error('Status elements not found in the DOM');
         displayErrorOnPage('Status elements not found');
-        logError(new Error('Status elements not found'), 'Status Elements Not Found');
         return;
     }
     
@@ -351,6 +443,10 @@ async function updateStats() {
                     if (networkTypeEl) networkTypeEl.textContent = 'Mainnet';
                     if (lastBlockEl) lastBlockEl.textContent = new Date().toLocaleString();
                     
+                    // Update additional sections
+                    updateYieldSection(blockHeight);
+                    updateBlockchainInfo(info);
+                    
                     // Update status
                     statusDot.style.backgroundColor = '#00ff00';
                     statusText.textContent = 'Connected';
@@ -364,7 +460,6 @@ async function updateStats() {
                 }
             } catch (error) {
                 console.error(`Failed to update stats from node ${node}:`, error);
-                logError(error, `Failed to Update Stats from Node ${node}`);
                 // Continue to next node
             }
         }
@@ -376,7 +471,6 @@ async function updateStats() {
         
     } catch (error) {
         console.error('Failed to update stats:', error);
-        logError(error, 'Failed to Update Stats');
         
         statusDot.style.backgroundColor = '#ff0000';
         statusText.textContent = 'Connection Error';
