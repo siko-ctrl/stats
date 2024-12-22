@@ -18,21 +18,46 @@ function formatNumber(num) {
     return new Intl.NumberFormat().format(num);
 }
 
+// Detailed error logging function
+function logError(error, context = '') {
+    console.error('=== ERROR DETAILS ===');
+    console.error('Context:', context);
+    console.error('Error Name:', error.name);
+    console.error('Error Message:', error.message);
+    console.error('Error Stack:', error.stack);
+    
+    // Additional error properties
+    if (error instanceof TypeError) {
+        console.error('Error Type Details:', {
+            lineNumber: error.lineNumber,
+            columnNumber: error.columnNumber,
+            fileName: error.fileName
+        });
+    }
+    
+    // If it's a network error, log more details
+    if (error instanceof Error) {
+        console.error('Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    }
+    console.error('=== END ERROR DETAILS ===');
+}
+
 // Make RPC call to a node with retries
 async function makeRPCCall(node, method, params = {}, retries = 3) {
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
+            console.log(`Attempt ${attempt}/${retries}: RPC call to ${node} with method: ${method}`);
+            
             const requestData = {
                 jsonrpc: "2.0",
                 id: "0",
                 method: method,
                 params: params
             };
-
-            console.log(`Attempt ${attempt}/${retries}: RPC call to ${node} with method: ${method}`);
+            
             console.log('Request data:', JSON.stringify(requestData));
             
-            const response = await fetch(node, {
+            const fetchOptions = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,7 +66,11 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
                 body: JSON.stringify(requestData),
                 mode: 'cors',
                 credentials: 'omit'
-            });
+            };
+            
+            console.log('Fetch options:', JSON.stringify(fetchOptions));
+            
+            const response = await fetch(node, fetchOptions);
             
             console.log('Response status:', response.status);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -67,15 +96,7 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
             return data;
         } catch (error) {
             console.error(`Attempt ${attempt} failed for ${method}:`, error);
-            
-            // Log specific error details
-            if (error instanceof TypeError) {
-                console.error('Network error details:', {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack
-                });
-            }
+            logError(error, `RPC Call Attempt ${attempt}`);
             
             if (attempt === retries) {
                 throw new Error(`Failed after ${retries} attempts: ${error.message}`);
@@ -94,12 +115,19 @@ async function makeRPCCall(node, method, params = {}, retries = 3) {
 
 // Update network stats
 async function updateStats() {
-    console.log('Starting updateStats...');
+    console.log('=== Starting updateStats ===');
     const statusDot = document.querySelector('.status-dot');
     const statusText = document.querySelector('.status-text');
     
+    // Ensure elements exist before using them
+    if (!statusDot || !statusText) {
+        console.error('Status elements not found in the DOM');
+        return;
+    }
+    
     try {
         // Try each node until one works
+        let success = false;
         for (const node of NODES) {
             try {
                 console.log(`Trying node: ${node}`);
@@ -111,42 +139,56 @@ async function updateStats() {
                 if (infoResponse && infoResponse.result) {
                     const info = infoResponse.result;
                     
-                    // Update UI elements
-                    document.getElementById('blockHeight').textContent = formatNumber(info.height);
-                    document.getElementById('difficulty').textContent = formatNumber(info.difficulty);
-                    document.getElementById('hashrate').textContent = formatHashrate(info.difficulty / 120);
+                    // Safely update UI elements
+                    const blockHeightEl = document.getElementById('blockHeight');
+                    const difficultyEl = document.getElementById('difficulty');
+                    const hashrateEl = document.getElementById('hashrate');
+                    const totalSupplyEl = document.getElementById('totalSupply');
+                    
+                    if (blockHeightEl) blockHeightEl.textContent = formatNumber(info.height);
+                    if (difficultyEl) difficultyEl.textContent = formatNumber(info.difficulty);
+                    if (hashrateEl) hashrateEl.textContent = formatHashrate(info.difficulty / 120);
                     
                     // Calculate total supply
                     const supply = (info.height * 50) + 1000000;
-                    document.getElementById('totalSupply').textContent = formatNumber(supply) + ' SAL';
+                    if (totalSupplyEl) totalSupplyEl.textContent = formatNumber(supply) + ' SAL';
                     
                     // Update status
                     statusDot.style.backgroundColor = '#00ff00';
                     statusText.textContent = 'Connected';
                     
                     console.log('Stats updated successfully');
-                    return; // Exit after successful update
+                    success = true;
+                    break; // Exit after successful update
                 }
             } catch (error) {
                 console.error(`Failed to update stats from node ${node}:`, error);
+                logError(error, `Stats Update for Node ${node}`);
                 // Continue to next node
             }
         }
         
         // If we get here, all nodes failed
-        throw new Error('All nodes failed to respond');
+        if (!success) {
+            throw new Error('All nodes failed to respond');
+        }
         
     } catch (error) {
         console.error('Failed to update stats:', error);
+        logError(error, 'Final Stats Update');
+        
         statusDot.style.backgroundColor = '#ff0000';
         statusText.textContent = 'Connection Error';
         
         // Clear stats when offline
-        document.getElementById('blockHeight').textContent = '-';
-        document.getElementById('difficulty').textContent = '-';
-        document.getElementById('hashrate').textContent = '-';
-        document.getElementById('totalSupply').textContent = '-';
+        const elements = ['blockHeight', 'difficulty', 'hashrate', 'totalSupply'];
+        elements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '-';
+        });
     }
+    
+    console.log('=== Completed updateStats ===');
 }
 
 // Start updates
