@@ -1,15 +1,19 @@
 // RPC nodes
 const NODES = [
-    'https://172.245.110.15.nip.io/json_rpc'  // VPS proxy server with HTTPS
+    'https://seed01.salvium.io:19081/json_rpc',
+    'https://seed02.salvium.io:19081/json_rpc',
+    'https://seed03.salvium.io:19081/json_rpc'
 ];
 
-// Global state for historical data
+// Global state for historical data and node tracking
 const historicalData = {
     blockHeight: [],
     hashrate: [],
     difficulty: [],
     totalSupply: []
 };
+
+const nodeStatus = [];
 
 // Utility functions to log errors to the UI
 function displayErrorOnPage(message) {
@@ -137,6 +141,67 @@ function updateCharts() {
     }
 }
 
+// Utility function to track node status
+async function checkNodeStatus(node) {
+    try {
+        const startTime = Date.now();
+        const infoResponse = await makeRPCCall(node, "get_info", {});
+        const responseTime = Date.now() - startTime;
+
+        if (infoResponse && infoResponse.result) {
+            const info = infoResponse.result;
+            return {
+                url: node,
+                status: 'online',
+                height: info.height,
+                difficulty: info.difficulty,
+                responseTime: responseTime,
+                lastChecked: new Date().toISOString()
+            };
+        }
+    } catch (error) {
+        return {
+            url: node,
+            status: 'offline',
+            error: error.message,
+            lastChecked: new Date().toISOString()
+        };
+    }
+}
+
+// Update nodes section in the UI
+function updateNodesSection() {
+    const nodesGrid = document.getElementById('nodesGrid');
+    if (!nodesGrid) return;
+
+    // Clear existing nodes
+    nodesGrid.innerHTML = '';
+
+    // Create node cards
+    nodeStatus.forEach(node => {
+        const nodeCard = document.createElement('div');
+        nodeCard.classList.add('node-card');
+        
+        const statusColor = node.status === 'online' ? '#4CAF50' : '#ff0000';
+        
+        nodeCard.innerHTML = `
+            <div class="node-status" style="background-color: ${statusColor}"></div>
+            <h3>${node.url}</h3>
+            <p>Status: ${node.status}</p>
+            ${node.status === 'online' ? `
+                <p>Block Height: ${formatNumber(node.height)}</p>
+                <p>Difficulty: ${formatNumber(node.difficulty)}</p>
+                <p>Response Time: ${node.responseTime}ms</p>
+            ` : `
+                <p>Error: ${node.error}</p>
+            `}
+            <small>Last Checked: ${new Date(node.lastChecked).toLocaleString()}</small>
+        `;
+        
+        nodesGrid.appendChild(nodeCard);
+    });
+}
+
 // Make RPC call to a node with retries
 async function makeRPCCall(node, method, params = {}, retries = 3) {
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -231,6 +296,17 @@ async function updateStats() {
     }
     
     try {
+        // Check status of all nodes
+        nodeStatus.length = 0; // Clear previous node status
+        const nodeStatusPromises = NODES.map(checkNodeStatus);
+        const nodeResults = await Promise.all(nodeStatusPromises);
+        
+        // Filter out null/undefined results
+        nodeStatus.push(...nodeResults.filter(result => result));
+        
+        // Update nodes section
+        updateNodesSection();
+        
         // Try each node until one works
         let success = false;
         for (const node of NODES) {

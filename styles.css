@@ -169,18 +169,68 @@ th {
     margin-bottom: 2rem;
 }
 
+.nodes-section {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.nodes-section h2 {
+    text-align: center;
+    color: var(--secondary-color);
+    margin-bottom: 1.5rem;
+}
+
 .nodes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
-    margin-top: 1rem;
 }
 
 .node-card {
-    background-color: rgba(110, 0, 255, 0.1);
-    padding: 1rem;
-    border-radius: 8px;
+    background-color: rgba(110, 0, 255, 0.05);
     border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.node-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.node-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.node-card h3 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    word-break: break-all;
+}
+
+.node-card p {
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.node-card small {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: rgba(0, 0, 0, 0.5);
+    text-align: right;
 }
 
 .yield-stats {
@@ -226,5 +276,8 @@ h1 {
     }
     th, td {
         padding: 0.5rem;
+    }
+    .nodes-grid {
+        grid-template-columns: 1fr;
     }
 }
