@@ -3,96 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salvium Network Statistics</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="public/Salvium_assets/coin_icon/black/favicon.ico">
+    <title>Salvium Stats</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0AEB85',
+                        secondary: '#181818',
+                        background: '#1a1a1a',
+                        card: '#242424',
+                        border: '#333333',
+                    },
+                },
+            },
+        }
+    </script>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <div class="navbar-brand">
-                <img src="public/Salvium_assets/wordmark_logo/white/salvium_wordmark_white.svg" alt="Salvium">
-                <h1>Network Statistics</h1>
-            </div>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="nav-links">
-                    <a href="#" class="active" id="networkLink">Network</a>
-                    <a href="#" id="stakingLink">Staking</a>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
-        <div id="networkStats">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Block Height</h3>
-                    <p id="blockHeight">-</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Network Hashrate</h3>
-                    <p id="hashrate">-</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Difficulty</h3>
-                    <p id="difficulty">-</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Total Supply</h3>
-                    <p id="totalSupply">-</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Block Reward</h3>
-                    <p id="blockReward">-</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Last Block</h3>
-                    <p id="lastBlock">-</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Network Type</h3>
-                    <p id="networkType">-</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Emission Rate (Daily)</h3>
-                    <p id="emissionRate">-</p>
-                </div>
-            </div>
-
-            <div class="charts-container">
-                <div class="chart-card">
-                    <h3>Block Time</h3>
-                    <div class="chart-container">
-                        <canvas id="blockTimeChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h3>Network Hashrate</h3>
-                    <div class="chart-container">
-                        <canvas id="hashrateChart"></canvas>
-                    </div>
-                </div>
+<body class="bg-background text-white min-h-screen flex flex-col">
+    <div class="flex-grow flex flex-col md:flex-row">
+        <!-- Sidebar -->
+        <div class="bg-background p-8 fixed h-screen w-64 border-r border-border hidden md:flex flex-col items-center">
+            <img src="public/Salvium_assets/wordmark_logo/white/salvium_wordmark_white.svg" alt="Salvium Logo" class="w-32 md:w-40" />
+            <div class="mt-8 space-y-4">
+                <p id="lastUpdate" class="text-gray-400 text-sm"></p>
             </div>
         </div>
 
-        <div id="stakingStats">
-            <!-- Staking content will be added later -->
+        <!-- Mobile Header -->
+        <div class="md:hidden bg-background p-4 border-b border-border flex items-center justify-between">
+            <img src="public/Salvium_assets/wordmark_logo/white/salvium_wordmark_white.svg" alt="Salvium Logo" class="h-8" />
+            <p id="mobileLastUpdate" class="text-gray-400 text-xs"></p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 md:ml-64">
+            <!-- Header -->
+            <div class="bg-background p-6 border-b border-border sticky top-0 z-10">
+                <h1 class="text-2xl font-bold text-white">Salvium Stats</h1>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Block Height</p>
+                        <h2 id="blockHeight" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Network Hashrate</p>
+                        <h2 id="hashrate" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Difficulty</p>
+                        <h2 id="difficulty" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Total Supply</p>
+                        <h2 id="totalSupply" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Block Reward</p>
+                        <h2 id="blockReward" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Last Block</p>
+                        <h2 id="lastBlock" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Network Type</p>
+                        <h2 id="networkType" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border hover:scale-[1.02] transition-transform duration-300 relative group">
+                        <img src="public/Salvium_assets/coin_icon/white/salvium_coin_white.svg" alt="" class="absolute top-4 right-4 w-10 h-10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <p class="text-gray-400 mb-2">Emission Rate (Daily)</p>
+                        <h2 id="emissionRate" class="text-2xl font-bold text-primary">-</h2>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-background p-6 rounded-lg border border-border">
+                        <h3 class="text-xl font-bold mb-4 text-white">Block Time</h3>
+                        <div class="h-[300px]">
+                            <canvas id="blockTimeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-background p-6 rounded-lg border border-border">
+                        <h3 class="text-xl font-bold mb-4 text-white">Network Hashrate</h3>
+                        <div class="h-[300px]">
+                            <canvas id="hashrateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <footer class="text-center py-4 md:py-6 text-gray-400 text-xs md:text-sm">
+        <p>Made with ❤️ by a community contributor</p>
+    </footer>
+
     <script src="app.js"></script>
 </body>
 </html>

@@ -19,8 +19,10 @@ const CHART_POINTS = 20;
 const COLORS = {
     primary: '#0AEB85',
     secondary: '#181818',
-    white: '#FFFFFF',
-    background: '#181818'
+    background: '#1a1a1a',
+    border: '#333333',
+    text: '#FFFFFF',
+    textSecondary: '#A0A0A0'
 };
 
 // Chart configurations
@@ -37,7 +39,10 @@ const chartOptions = {
                 color: 'rgba(255, 255, 255, 0.1)'
             },
             ticks: {
-                color: COLORS.white
+                color: COLORS.text,
+                font: {
+                    family: 'Inter'
+                }
             }
         },
         y: {
@@ -45,7 +50,10 @@ const chartOptions = {
                 color: 'rgba(255, 255, 255, 0.1)'
             },
             ticks: {
-                color: COLORS.white
+                color: COLORS.text,
+                font: {
+                    family: 'Inter'
+                }
             },
             beginAtZero: true
         }
@@ -53,6 +61,24 @@ const chartOptions = {
     plugins: {
         legend: {
             display: false
+        },
+        tooltip: {
+            backgroundColor: COLORS.background,
+            titleColor: COLORS.text,
+            bodyColor: COLORS.text,
+            borderColor: COLORS.border,
+            borderWidth: 1,
+            padding: 12,
+            displayColors: false,
+            titleFont: {
+                family: 'Inter',
+                size: 14,
+                weight: 600
+            },
+            bodyFont: {
+                family: 'Inter',
+                size: 12
+            }
         }
     }
 };
@@ -101,10 +127,6 @@ function initializeCharts() {
     const ctx1 = document.getElementById('blockTimeChart').getContext('2d');
     const ctx2 = document.getElementById('hashrateChart').getContext('2d');
 
-    // Set chart background
-    ctx1.canvas.style.backgroundColor = COLORS.background;
-    ctx2.canvas.style.backgroundColor = COLORS.background;
-
     // Initialize with empty data
     const emptyData = Array(CHART_POINTS).fill(0);
     const emptyLabels = Array(CHART_POINTS).fill('');
@@ -119,23 +141,13 @@ function initializeCharts() {
                 backgroundColor: 'rgba(10, 235, 133, 0.1)',
                 borderWidth: 2,
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: COLORS.primary
             }]
         },
-        options: {
-            ...chartOptions,
-            scales: {
-                ...chartOptions.scales,
-                y: {
-                    ...chartOptions.scales.y,
-                    title: {
-                        display: true,
-                        text: 'Block Time (seconds)',
-                        color: COLORS.white
-                    }
-                }
-            }
-        }
+        options: chartOptions
     });
 
     hashrateChart = new Chart(ctx2, {
@@ -148,23 +160,13 @@ function initializeCharts() {
                 backgroundColor: 'rgba(10, 235, 133, 0.1)',
                 borderWidth: 2,
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: COLORS.primary
             }]
         },
-        options: {
-            ...chartOptions,
-            scales: {
-                ...chartOptions.scales,
-                y: {
-                    ...chartOptions.scales.y,
-                    title: {
-                        display: true,
-                        text: 'Hashrate',
-                        color: COLORS.white
-                    }
-                }
-            }
-        }
+        options: chartOptions
     });
 }
 
@@ -180,7 +182,7 @@ function updateCharts(blockTime, hashrate) {
     
     blockTimeChart.data.labels = blockTimeData.map(point => point.x);
     blockTimeChart.data.datasets[0].data = blockTimeData.map(point => point.y);
-    blockTimeChart.update('none'); // Use 'none' to disable animation for smoother updates
+    blockTimeChart.update('none');
     
     // Update hashrate chart
     hashrateData.push({ x: timestamp, y: hashrate });
@@ -188,7 +190,7 @@ function updateCharts(blockTime, hashrate) {
     
     hashrateChart.data.labels = hashrateData.map(point => point.x);
     hashrateChart.data.datasets[0].data = hashrateData.map(point => point.y);
-    hashrateChart.update('none'); // Use 'none' to disable animation for smoother updates
+    hashrateChart.update('none');
 }
 
 // Make RPC call to a node
@@ -245,6 +247,11 @@ async function updateStats() {
             
             // Update charts
             updateCharts(blockTime, hashrate);
+
+            // Update last update time
+            const lastUpdateText = `Last updated: ${new Date().toLocaleString()}`;
+            document.getElementById('lastUpdate').textContent = lastUpdateText;
+            document.getElementById('mobileLastUpdate').textContent = lastUpdateText;
             
             success = true;
             break;
